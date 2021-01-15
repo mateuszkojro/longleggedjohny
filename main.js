@@ -4,7 +4,21 @@ import { OrbitControls } from "./js/controls.js";
 Physijs.scripts.worker = '/js/physijs_worker.js';
 Physijs.scripts.ammo = '/js/ammo.js';
 
+// dzieki temu moge znalezc z ktorej strony uderzyla - mega chujowo zrobione
+// ale will do for now
+const find_bigest = (vector) => {
+  const max = max([vector.x, vector.y, vector.z]);
+  switch (max) {
+    case a.size:
+      return new THREE.Vector3(1,0,0);
+    case b.size:
+      return new THREE.Vector3(0,1,0);
+    case c.size:
+      return new THREE.Vector3(0,0,1);
+  }
+}
 
+// controlsy dla obkeitu oznaczonego nazwa player - poki co tylko rudamentary
 document.onkeydown = function(key) {
   var box = scene.getObjectByName('player');
   // jezeli zmieniamy pozycje muismy uzyc tkiego hacka
@@ -29,7 +43,7 @@ document.onkeydown = function(key) {
       break;
   };
   scene.simulate();
-  renderer.render();
+  //renderer.render();
 }
 
 
@@ -66,7 +80,7 @@ const create_floor = () => {
     0.9,
     0.9
   )
-  const floor = new Physijs.BoxMesh(
+  const floor = new Physijs.BoxMesh( 
     new THREE.BoxGeometry(50, 1, 50),
     floor_material,
     0, 0
@@ -78,6 +92,8 @@ const create_floor = () => {
 // returns an arr of new obj adding up to old obj 
 const collapse_building = (angle, building, force) => {
 
+  //mozna by bylo zmniejszac predkosc z jaka porusza sie cialo po zderzeniu
+  //that would look more real
 
   const build_material = Physijs.createMaterial(
     new THREE.MeshLambertMaterial({
@@ -92,9 +108,9 @@ const collapse_building = (angle, building, force) => {
     500, 500 // im wieksze tym i guess ciezsze 
   )
 
-  base.position.y = building.position.y;
-  base.position.x = building.position.x;
-  base.position.z = building.position.y;
+  base.position.x = angle.x * building.geometry.parameters.width + building.position.x;
+  base.position.y = angle.y * building.geometry.parameters.height + building.position.y;
+  base.position.z = angle.z * building.geometry.parameters.depth + building.position.y;
 
   const gravel = new Physijs.BoxMesh(
     new THREE.CubeGeometry(5, 10 * 0.4, 5),
@@ -102,10 +118,9 @@ const collapse_building = (angle, building, force) => {
     500, 500 // im wieksze tym i guess ciezsze 
   )
 
-  gravel.position.y = building.position.y + (5 / 2) + 1;
-  gravel.position.x = building.position.x;
-  gravel.position.z = building.position.y;
-
+  gravel.position.x = angle.x * building.geometry.parameters.width + building.position.x;
+  gravel.position.y = angle.y * building.geometry.parameters.height + building.position.y;
+  gravel.position.z = angle.z * building.geometry.parameters.depth + building.position.z;
   return { base, gravel }
 
 }
@@ -227,7 +242,7 @@ initScene = function() {
   )
   //sphere.position.y = 3;
   sphere.name = "sp";
-  scene.add(sphere)
+  //scene.add(sphere)
 
 
   const controls = new OrbitControls(camera, renderer.domElement);
