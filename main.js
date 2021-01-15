@@ -7,6 +7,7 @@ Physijs.scripts.ammo = '/js/ammo.js';
 
 document.onkeydown = function(key) {
   var box = scene.getObjectByName('player');
+  // jezeli zmieniamy pozycje muismy uzyc tkiego hacka
   box.__dirtyRotation = true;
   box.__dirtyPosition = true;
   // You may also want to cancel the object's velocity
@@ -51,7 +52,6 @@ const create_building = (x, y, z, scale) => {
     500, 500 // im wieksze tym i guess ciezsze 
   )
 
-  // jezeli zmieniamy pozycje musimu uzyc dodatkowych func
   build.position.y = y;
   build.position.x = x;
   build.position.z = z;
@@ -75,6 +75,43 @@ const create_floor = () => {
 
 }
 
+// returns an arr of new obj adding up to old obj 
+const collapse_building = (angle, building, force) => {
+
+
+  const build_material = Physijs.createMaterial(
+    new THREE.MeshLambertMaterial({
+      color: 0x00ff00, wireframe: true
+    }),
+    9, // tarcie
+    0.1) // bouncines
+
+  const base = new Physijs.BoxMesh(
+    new THREE.CubeGeometry(5, 10 * 0.5, 5),
+    build_material,
+    500, 500 // im wieksze tym i guess ciezsze 
+  )
+
+  base.position.y = building.position.y;
+  base.position.x = building.position.x;
+  base.position.z = building.position.y;
+
+  const gravel = new Physijs.BoxMesh(
+    new THREE.CubeGeometry(5, 10 * 0.4, 5),
+    build_material,
+    500, 500 // im wieksze tym i guess ciezsze 
+  )
+
+  gravel.position.y = building.position.y + (5 / 2) + 1;
+  gravel.position.x = building.position.x;
+  gravel.position.z = building.position.y;
+
+  return { base, gravel }
+
+}
+
+
+
 var initScene, render, renderer, scene, camera, box;
 
 initScene = function() {
@@ -82,7 +119,7 @@ initScene = function() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.getElementById('viewport').appendChild(renderer.domElement);
 
-  scene = new Physijs.Scene({ fixedTimeStep: 1 / 300 });
+  scene = new Physijs.Scene({ fixedTimeStep: 1 / 60 });
 
   const light = new THREE.AmbientLight(0xffffff); // soft white light
   scene.add(light);
@@ -102,11 +139,6 @@ initScene = function() {
 
   scene.add(create_floor())
 
-  scene.add(create_building(10, 5, 0, 1))
-  scene.add(create_building(-10, 5, 0, 1))
-  scene.add(create_building(10, 5, 5, 1))
-  scene.add(create_building(0, 5, -10, 1))
-  scene.add(create_building(0, 5, 10, 1))
 
   //  for (let i = 0; i < 2; i++) {
   //scene.add(
@@ -154,37 +186,48 @@ initScene = function() {
       //point.position.y = other_object.position.y + (-2.5 * contact_normal.y);
       //point.position.z = other_object.position.z + (-2.5 * contact_normal.z);
 
-      point.position.x = test.position.x + (2.5 * contact_normal.x);
-      point.position.y = test.position.y + (2.5 * contact_normal.y);
-      point.position.z = test.position.z + (2.5 * contact_normal.z);
+      point.position.x = this.position.x + (2.5 * contact_normal.x);
+      point.position.y = this.position.y + (2.5 * contact_normal.y);
+      point.position.z = this.position.z + (2.5 * contact_normal.z);
 
       //scene.add(point);
 
-      const x = test.position.x;
-      const y = test.position.y;
-      const z = test.position.z;
+      //const x = this.position.x;
+      //const y = this.position.y;
+      //const z = this.position.z;
 
-      test.world.remove(test);
+      const { base, gravel } = collapse_building(contact_normal, this, relative_velocity);
+
+      const world = this.world;
+
+      this.world.remove(this);
+
+      console.log(base)
+
+      scene.add(base)
+      scene.add(gravel)
+
+      console.log(base)
 
       const geo = new THREE.BufferGeometry().setFromPoints(
         [point.position.x,
         point.position.y,
         point.position.z])
-      const new_one = create_building(x, y, z, 1 / 2);
-      scene.add(new_one);
+      //const new_one = create_building(x, y, z, 1 / 2);
+      //scene.add(new_one);
 
     }
 
 
   });
 
-  //const sphere = new Physijs.SphereMesh(
-  //new THREE.SphereGeometry(2.5),
-  //box_material
-  //)
-  ////sphere.position.y = 3;
-  //sphere.name = "sp";
-  //scene.add(sphere)
+  const sphere = new Physijs.SphereMesh(
+    new THREE.SphereGeometry(2.5),
+    box_material
+  )
+  //sphere.position.y = 3;
+  sphere.name = "sp";
+  scene.add(sphere)
 
 
   const controls = new OrbitControls(camera, renderer.domElement);
