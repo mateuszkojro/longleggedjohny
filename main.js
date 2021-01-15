@@ -6,7 +6,7 @@ Physijs.scripts.ammo = '/js/ammo.js';
 
 
 document.onkeydown = function(key) {
-  var box = scene.getObjectByName('box');
+  var box = scene.getObjectByName('player');
   box.__dirtyRotation = true;
   box.__dirtyPosition = true;
   // You may also want to cancel the object's velocity
@@ -36,7 +36,7 @@ const randomInt = (min, max) => {
   return min + Math.floor((max - min) * Math.random());
 }
 
-const create_building = (x, y, z) => {
+const create_building = (x, y, z, scale) => {
   // -- buildings -- 
   const build_material = Physijs.createMaterial(
     new THREE.MeshLambertMaterial({
@@ -46,7 +46,7 @@ const create_building = (x, y, z) => {
     0.1) // bouncines
 
   const build = new Physijs.BoxMesh(
-    new THREE.CubeGeometry(5, 10, 5),
+    new THREE.CubeGeometry(5 * scale, 10, 5 * scale),
     build_material,
     500, 500 // im wieksze tym i guess ciezsze 
   )
@@ -102,24 +102,25 @@ initScene = function() {
 
   scene.add(create_floor())
 
-  scene.add(create_building(10, 5, 0))
-  scene.add(create_building(-10, 5, 0))
-  scene.add(create_building(10, 5, 5))
-  scene.add(create_building(0, 5, -10))
-  scene.add(create_building(0, 5, 10))
+  scene.add(create_building(10, 5, 0, 1))
+  scene.add(create_building(-10, 5, 0, 1))
+  scene.add(create_building(10, 5, 5, 1))
+  scene.add(create_building(0, 5, -10, 1))
+  scene.add(create_building(0, 5, 10, 1))
 
-  for (let i = 0; i < 2; i++) {
-    scene.add(
-      create_building(randomInt(-25, 25),
-        5,
-        randomInt(-25, 25)))
-  }
+  //  for (let i = 0; i < 2; i++) {
+  //scene.add(
+  //create_building(randomInt(-25, 25),
+  //5,
+  //randomInt(-25, 25)))
+  //}
 
   // --- BOX ---
-  const box_material = new Physijs.createMaterial(new THREE.MeshLambertMaterial({
-    color: "red",
-    wireframe: true
-  }), 9, 0.9)
+  const box_material = new Physijs.createMaterial(new
+    THREE.MeshLambertMaterial({
+      color: "red",
+      wireframe: true
+    }), 9, 0.9)
 
   const box = new Physijs.BoxMesh(
     new THREE.CubeGeometry(5, 5, 5),
@@ -127,11 +128,17 @@ initScene = function() {
   );
   box.position.y = 20;
   box.position.x = 5;
-  box.name = "box";
+  box.name = "player";
   scene.add(box);
 
-  box.addEventListener('collision', function(other_object, relative_velocity, relative_rotation, contact_normal) {
-    if (other_object.name == 'sp') {
+  const test = create_building(0, 9, 0, 1)
+  test.name = "sp";
+  scene.add(test);
+
+  test.addEventListener('collision', function(other_object, relative_velocity,
+    relative_rotation, contact_normal) {
+
+    if (other_object.name == 'player') {
       console.log(other_object);
       console.log(relative_velocity);
       console.log(relative_rotation);
@@ -147,22 +154,27 @@ initScene = function() {
       //point.position.y = other_object.position.y + (-2.5 * contact_normal.y);
       //point.position.z = other_object.position.z + (-2.5 * contact_normal.z);
 
-      point.position.x = box.position.x + (2.5 * contact_normal.x);
-      point.position.y = box.position.y + (2.5 * contact_normal.y);
-      point.position.z = box.position.z + (2.5 * contact_normal.z);
+      point.position.x = test.position.x + (2.5 * contact_normal.x);
+      point.position.y = test.position.y + (2.5 * contact_normal.y);
+      point.position.z = test.position.z + (2.5 * contact_normal.z);
 
-      scene.add(point);
+      //scene.add(point);
+
+      const x = test.position.x;
+      const y = test.position.y;
+      const z = test.position.z;
+
+      test.world.remove(test);
 
       const geo = new THREE.BufferGeometry().setFromPoints(
         [point.position.x,
         point.position.y,
         point.position.z])
+      const new_one = create_building(x, y, z, 1 / 2);
+      scene.add(new_one);
+
     }
-      
-      //const new_one = create_building(box.position.x,box.position.y,box.position.z);
-      //scene.add(new_one);
-      
-      //box.world.remove(box);
+
 
   });
 
@@ -174,9 +186,6 @@ initScene = function() {
   //sphere.name = "sp";
   //scene.add(sphere)
 
-  const test = create_building(0,9,0)
-  test.name  = "sp";
-  scene.add(test);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   requestAnimationFrame(render);
