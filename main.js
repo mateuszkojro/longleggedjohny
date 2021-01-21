@@ -1,5 +1,5 @@
-'use strict';
 import { OrbitControls } from "./js/controls.js";
+import THREE from './node_modules/three'
 
 Physijs.scripts.worker = '/js/physijs_worker.js';
 Physijs.scripts.ammo = '/js/ammo.js';
