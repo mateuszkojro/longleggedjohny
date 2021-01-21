@@ -1,5 +1,7 @@
 import { OrbitControls } from "./js/controls.js";
-import THREE from './node_modules/three'
+// import { Vector3 } from 'three'
+import * as THREE from 'three'
+// import * as Physijs from 'physijs'
 
 Physijs.scripts.worker = '/js/physijs_worker.js';
 Physijs.scripts.ammo = '/js/ammo.js';
@@ -10,16 +12,16 @@ const find_bigest = (vector) => {
   const max = max([vector.x, vector.y, vector.z]);
   switch (max) {
     case a.size:
-      return new THREE.Vector3(1,0,0);
+      return new THREE.Vector3(1, 0, 0);
     case b.size:
-      return new THREE.Vector3(0,1,0);
+      return new THREE.Vector3(0, 1, 0);
     case c.size:
-      return new THREE.Vector3(0,0,1);
+      return new THREE.Vector3(0, 0, 1);
   }
 }
 
 // controlsy dla obkeitu oznaczonego nazwa player - poki co tylko rudamentary
-document.onkeydown = function(key) {
+document.onkeydown = (key) => {
   var box = scene.getObjectByName('player');
   // jezeli zmieniamy pozycje muismy uzyc tkiego hacka
   box.__dirtyRotation = true;
@@ -45,7 +47,6 @@ document.onkeydown = function(key) {
   scene.simulate();
   //renderer.render();
 }
-
 
 const randomInt = (min, max) => {
   return min + Math.floor((max - min) * Math.random());
@@ -80,7 +81,7 @@ const create_floor = () => {
     0.9,
     0.9
   )
-  const floor = new Physijs.BoxMesh( 
+  const floor = new Physijs.BoxMesh(
     new THREE.BoxGeometry(50, 1, 50),
     floor_material,
     0, 0
@@ -121,6 +122,7 @@ const collapse_building = (angle, building, force) => {
   gravel.position.x = angle.x * building.geometry.parameters.width + building.position.x;
   gravel.position.y = angle.y * building.geometry.parameters.height + building.position.y;
   gravel.position.z = angle.z * building.geometry.parameters.depth + building.position.z;
+
   return { base, gravel }
 
 }
@@ -129,7 +131,7 @@ const collapse_building = (angle, building, force) => {
 
 var initScene, render, renderer, scene, camera, box;
 
-initScene = function() {
+initScene = function () {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.getElementById('viewport').appendChild(renderer.domElement);
@@ -182,7 +184,7 @@ initScene = function() {
   test.name = "sp";
   scene.add(test);
 
-  test.addEventListener('collision', function(other_object, relative_velocity,
+  test.addEventListener('collision', function (other_object, relative_velocity,
     relative_rotation, contact_normal) {
 
     if (other_object.name == 'player') {
@@ -249,9 +251,7 @@ initScene = function() {
   requestAnimationFrame(render);
 };
 
-render = function() {
-
-
+render = function () {
 
   scene.simulate(); // run physics
   renderer.render(scene, camera); // render the scene
