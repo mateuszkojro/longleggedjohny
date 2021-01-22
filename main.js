@@ -1,6 +1,6 @@
-'use strict';
 import { OrbitControls } from "./js/controls.js";
 import { GLTFLoader } from "./js/loader.js";
+// import THREE from './node_modules/three'
 
 
 // Global setup
@@ -23,7 +23,7 @@ const find_bigest = (vector) => {
 }
 
 // controlsy dla obkeitu oznaczonego nazwa player - poki co tylko rudamentary
-document.onkeydown = function(key) {
+document.onkeydown = function (key) {
   var box = scene.getObjectByName('player');
   // jezeli zmieniamy pozycje muismy uzyc tkiego hacka
   box.__dirtyRotation = true;
@@ -181,7 +181,7 @@ initScene = (crab) => {
   test.name = "sp";
   scene.add(test);
 
-  test.addEventListener('collision', function(other_object, relative_velocity,
+  test.addEventListener('collision', function (other_object, relative_velocity,
     relative_rotation, contact_normal) {
 
     if (other_object.name == 'player') {
@@ -253,7 +253,7 @@ initScene = (crab) => {
   requestAnimationFrame(render);
 };
 
-render = function() {
+render = function () {
   scene.simulate(); // run physics
   renderer.render(scene, camera); // render the scene
   requestAnimationFrame(render);
