@@ -1,20 +1,24 @@
 'use strict';
 import { OrbitControls } from "./js/controls.js";
+import { GLTFLoader } from "./js/loader.js";
 
+
+// Global setup
 Physijs.scripts.worker = '/js/physijs_worker.js';
 Physijs.scripts.ammo = '/js/ammo.js';
 
 // dzieki temu moge znalezc z ktorej strony uderzyla - mega chujowo zrobione
 // ale will do for now
+// @FIXME nie dziala bo co jak udezymy od negatywnej strony 
 const find_bigest = (vector) => {
   const max = max([vector.x, vector.y, vector.z]);
   switch (max) {
     case a.size:
-      return new THREE.Vector3(1,0,0);
+      return new THREE.Vector3(1, 0, 0);
     case b.size:
-      return new THREE.Vector3(0,1,0);
+      return new THREE.Vector3(0, 1, 0);
     case c.size:
-      return new THREE.Vector3(0,0,1);
+      return new THREE.Vector3(0, 0, 1);
   }
 }
 
@@ -51,6 +55,7 @@ const randomInt = (min, max) => {
   return min + Math.floor((max - min) * Math.random());
 }
 
+// Creates a building at coordiantes
 const create_building = (x, y, z, scale) => {
   // -- buildings -- 
   const build_material = Physijs.createMaterial(
@@ -80,7 +85,7 @@ const create_floor = () => {
     0.9,
     0.9
   )
-  const floor = new Physijs.BoxMesh( 
+  const floor = new Physijs.BoxMesh(
     new THREE.BoxGeometry(50, 1, 50),
     floor_material,
     0, 0
@@ -128,8 +133,11 @@ const collapse_building = (angle, building, force) => {
 
 
 var initScene, render, renderer, scene, camera, box;
+var loader = new GLTFLoader();
 
-initScene = function() {
+
+
+initScene = (crab) => {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.getElementById('viewport').appendChild(renderer.domElement);
@@ -151,32 +159,23 @@ initScene = function() {
   camera.lookAt(scene.position);
   scene.add(camera);
 
-
   scene.add(create_floor())
 
-
-  //  for (let i = 0; i < 2; i++) {
-  //scene.add(
-  //create_building(randomInt(-25, 25),
-  //5,
-  //randomInt(-25, 25)))
-  //}
-
-  // --- BOX ---
-  const box_material = new Physijs.createMaterial(new
+  // --- PLAYER ---
+  const player_material = new Physijs.createMaterial(new
     THREE.MeshLambertMaterial({
       color: "red",
       wireframe: true
     }), 9, 0.9)
 
-  const box = new Physijs.BoxMesh(
+  const player = new Physijs.BoxMesh(
     new THREE.CubeGeometry(5, 5, 5),
-    box_material
+    player_material
   );
-  box.position.y = 20;
-  box.position.x = 5;
-  box.name = "player";
-  scene.add(box);
+  player.position.y = 20;
+  player.position.x = 5;
+  player.name = "player";
+  scene.add(player);
 
   const test = create_building(0, 9, 0, 1)
   test.name = "sp";
@@ -211,7 +210,10 @@ initScene = function() {
       //const y = this.position.y;
       //const z = this.position.z;
 
-      const { base, gravel } = collapse_building(contact_normal, this, relative_velocity);
+      const { base, gravel } = collapse_building(
+        contact_normal,
+        this,
+        relative_velocity);
 
       const world = this.world;
 
@@ -236,13 +238,15 @@ initScene = function() {
 
   });
 
-  const sphere = new Physijs.SphereMesh(
-    new THREE.SphereGeometry(2.5),
-    box_material
+  console.log("crab: ", crab.asset) //crab.scene.children[1].children[10].geometry)
+  console.log("box geo", new THREE.BoxGeometry)
+  const sphere = new Physijs.ConvexMesh(
+    crab.scene.children[1].children[10].geometry,
+    player_material
   )
   //sphere.position.y = 3;
   sphere.name = "sp";
-  //scene.add(sphere)
+  scene.add(sphere)
 
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -250,15 +254,18 @@ initScene = function() {
 };
 
 render = function() {
-
-
-
   scene.simulate(); // run physics
   renderer.render(scene, camera); // render the scene
   requestAnimationFrame(render);
 };
 
-window.onload = initScene();
+//window.onload = initScene();
+loader.load(
+  "./files/crab.glb",
+  initScene,
+  (xhr) => { console.log((xhr.loaded / xhr.total) * 100 + "% loaded"); },
+  (err) => { console.log("An error happened", err); }
+);
 
 //@TODO jak dodamy sepie to bedzie wygladalo cool a bedzie o wiele mniej
 //problemow z kolorami
