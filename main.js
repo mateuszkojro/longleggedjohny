@@ -3,6 +3,8 @@
 import {GLTFLoader} from "./js/loader.js";
 // import {OrbitControls} from "./js/controls";
 
+//hello
+
 // imports for sepia renderer pass
 import {EffectComposer} from './js/jsm/postprocessing/EffectComposer.js';
 import {ShaderPass} from "./js/jsm/postprocessing/ShaderPass.js";
