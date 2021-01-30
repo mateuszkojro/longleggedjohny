@@ -175,9 +175,16 @@ const collision_handler = (other_object, relative_velocity,
 
 const create_building = (x, y, z, scale) => {
     // -- buildings --
+    const texture = new THREE.TextureLoader().load( "./files/building.jpg" );
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set( 4, 4 );
+
     const build_material = Physijs.createMaterial(
         new THREE.MeshLambertMaterial({
-            color: 0x00ff00, wireframe: false
+            color: 0x00ff00,
+            wireframe: false,
+            map: texture
         }),
         100, // tarcie
         0.1) // bouncines
@@ -199,8 +206,18 @@ const create_building = (x, y, z, scale) => {
 
 const create_floor = () => {
     // --- FLOOR ---
+
+    const texture = new THREE.TextureLoader().load( "./files/ground.jpg" );
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set( 4, 4 );
+
+
     const floor_material = new Physijs.createMaterial(
-        new THREE.MeshStandardMaterial({color: 0x0000ff}),
+        new THREE.MeshStandardMaterial({
+            color: 0x0000ff,
+            map:texture
+        }),
         1.1,
         0.1
     )
