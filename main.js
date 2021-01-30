@@ -1,6 +1,7 @@
 // controls
 // ladowanie modelu craba
 import {GLTFLoader} from "./js/loader.js";
+// import {OrbitControls} from "./js/controls";
 
 // imports for sepia renderer pass
 import {EffectComposer} from './js/jsm/postprocessing/EffectComposer.js';
@@ -15,23 +16,18 @@ import {VignetteShader} from '/js/jsm/shaders/VignetteShader.js';
 import {ColorifyShader} from './js/jsm/shaders/ColorifyShader.js';
 
 
+
 // setup physics engine
 Physijs.scripts.worker = '/js/physijs_worker.js';
 Physijs.scripts.ammo = '/js/ammo.js';
 
-// public names
+// public names - everything with global scopes goes here defined with var
 var crab, initScene, render, renderer, scene, camera, box, mixer, composerScene, composer;
 var loader = new GLTFLoader();
 var clock = new THREE.Clock();
 
+// our setup
 initScene = (loaded_crab) => {
-
-
-    crab = loaded_crab.scene.children[2];
-    crab.name = "crab"
-    crab.castShadow = true;
-    crab.reciveShadow = true;
-    // crab.scale.set(5, 5, 5)
 
     renderer = create_renderer()
     scene = create_scene()
@@ -41,33 +37,40 @@ initScene = (loaded_crab) => {
     scene.add(create_floor())
     scene.add(create_player())
 
+    // --- config loaded model
+    crab = loaded_crab.scene.children[2];
+    crab.name = "crab"
+    crab.castShadow = true;
+    crab.reciveShadow = true;
+    scene.add(crab);
+    // ---
+
     scene.add(create_building(10, 10, 10, 1))
     scene.add(create_building(10, 10, -10, 1))
     scene.add(create_building(-10, 10, 10, 1))
     scene.add(create_building(-10, 10, -10, 1))
 
-    scene.add(crab);
+
+    // FIXME: that could be done much better but i cannot
+    // think of the way rn
     let [comp, compScene] = add_sepia();
     composer = comp;
     composerScene = compScene;
 
-    //--- Animating crab model ---
+    //--- Run all animations in model for now ---
+    // FIXME: get it to another func
     mixer = new THREE.AnimationMixer(crab);
-
     loaded_crab.animations.forEach((clip) => {
-
-        // if (clip.name == "Walk") {
+        // we could check for animation name here
         if (true) {
             console.log("playing: ", clip)
-
             mixer.clipAction(clip).play();
-
         }
-
     });
     //---
 
-    //test.addEventListener('collision', collision_handler);
+    // FIXME: for now nothing bcs collison_handler does not work
+    scene.getObjectByName('player').addEventListener('collision', ()=>{});
 
     // const controls = new OrbitControls(camera, renderer.domElement);
     requestAnimationFrame(render);
@@ -121,6 +124,7 @@ const randomInt = (min, max) => {
     return min + Math.floor((max - min) * Math.random());
 }
 
+// FIXME: for now there is shit going there dont use it
 const collision_handler = (other_object, relative_velocity,
                            relative_rotation, contact_normal) => {
     return;
@@ -173,6 +177,7 @@ const collision_handler = (other_object, relative_velocity,
 
 }
 
+// returns a box with configured textures
 const create_building = (x, y, z, scale) => {
     // -- buildings --
     const texture = new THREE.TextureLoader().load( "./files/building.jpg" );
@@ -204,6 +209,8 @@ const create_building = (x, y, z, scale) => {
     return build;
 }
 
+// creates and configues base
+// returns configured Physijs.Box without mass
 const create_floor = () => {
     // --- FLOOR ---
 
@@ -230,7 +237,8 @@ const create_floor = () => {
     return floor;
 }
 
-// returns an arr of new obj adding up to old obj 
+// FIXME: not used bcs when building splits it shoots into space
+//  returns an arr of new obj adding up to old obj
 const collapse_building = (angle, building, force) => {
 
     //mozna by bylo zmniejszac predkosc z jaka porusza sie cialo po zderzeniu
@@ -265,7 +273,6 @@ const collapse_building = (angle, building, force) => {
     return {base, gravel}
 
 }
-
 
 const create_player = () => {
     // --- BOX ---
@@ -411,9 +418,7 @@ const add_sepia = () => {
     ]
 }
 
-render = () => {
-    sync_player()
-
+const sync_camera = () => {
     let player = scene.getObjectByName('player')
 
     camera.position.set(
@@ -422,23 +427,37 @@ render = () => {
         player.position.z + 12,
     )
     camera.lookAt(player.position)
+}
 
-
+const update_animation = () => {
     // --- animacje crab ---
     let delta = clock.getDelta();
     if (mixer) mixer.update(delta);
     // ---
+}
 
-    scene.simulate(); //update physics
-    renderer.render(scene, camera); // render the scene
-
+const apply_sepia = () => {
     if (composerScene) {
         // --- sepia ---
         composerScene.render(0.01);
         composer.render(0.01);
         // ---
     }
+}
 
+// our game loop
+render = () => {
+    sync_player()
+    sync_camera() // neds to be below sync_player()
+
+    update_animation()
+
+    scene.simulate(); //update physics
+
+    renderer.render(scene, camera); // render the scene
+
+
+    apply_sepia() // neds to be below renderer
 
     requestAnimationFrame(render);
 };
