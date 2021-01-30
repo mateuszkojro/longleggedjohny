@@ -59,12 +59,13 @@ initScene = (loaded_crab) => {
     composer = comp;
     composerScene = compScene;
 
+    
     //--- Run all animations in model for now ---
     // FIXME: get it to another func
     mixer = new THREE.AnimationMixer(crab);
     loaded_crab.animations.forEach((clip) => {
         // we could check for animation name here
-        if (true) {
+        if (clip.name == "[Akcja odłożona].004") {
             console.log("playing: ", clip)
             mixer.clipAction(clip).play();
         }
@@ -107,6 +108,7 @@ document.onkeydown = function (key) {
     switch (key.code) {
         case "ArrowRight":
             box.position.x += offset;
+            
             break;
         case "ArrowLeft":
             box.position.x -= offset;
