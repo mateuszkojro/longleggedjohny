@@ -279,7 +279,7 @@ const create_player = () => {
         colider_material
     );
     player_colider.name = "player";
-    player_colider.position.set(0, 12, 0)
+    player_colider.position.set(+20, 12, +20)
     return player_colider;
 }
 
