@@ -1,5 +1,4 @@
 // controls
-import {OrbitControls} from "./js/controls.js";
 // ladowanie modelu craba
 import {GLTFLoader} from "./js/loader.js";
 
@@ -21,7 +20,7 @@ Physijs.scripts.worker = '/js/physijs_worker.js';
 Physijs.scripts.ammo = '/js/ammo.js';
 
 // public names
-var crab, initScene, render, renderer, scene, camera, box, mixer;
+var crab, initScene, render, renderer, scene, camera, box, mixer, composerScene, composer;
 var loader = new GLTFLoader();
 var clock = new THREE.Clock();
 
@@ -30,7 +29,9 @@ initScene = (loaded_crab) => {
 
     crab = loaded_crab.scene.children[2];
     crab.name = "crab"
-    crab.scale.set(5, 5, 5)
+    crab.castShadow = true;
+    crab.reciveShadow = true;
+    // crab.scale.set(5, 5, 5)
 
     renderer = create_renderer()
     scene = create_scene()
@@ -38,25 +39,25 @@ initScene = (loaded_crab) => {
     camera = create_camera()
     scene.add(camera);
     scene.add(create_floor())
-    scene.add(create_building(4, 4, 4, 1))
     scene.add(create_player())
+
+    scene.add(create_building(10, 10, 10, 1))
+    scene.add(create_building(10, 10, -10, 1))
+    scene.add(create_building(-10, 10, 10, 1))
+    scene.add(create_building(-10, 10, -10, 1))
+
     scene.add(crab);
-
-    for (let i = 0; i < 2; i++) {
-        scene.add(
-            create_building(randomInt(-25, 25),
-                5,
-                randomInt(-25, 25))
-        )
-    }
-
+    let [comp, compScene] = add_sepia();
+    composer = comp;
+    composerScene = compScene;
 
     //--- Animating crab model ---
     mixer = new THREE.AnimationMixer(crab);
 
     loaded_crab.animations.forEach((clip) => {
 
-        if (clip.name == "Walk") {
+        // if (clip.name == "Walk") {
+        if (true) {
             console.log("playing: ", clip)
 
             mixer.clipAction(clip).play();
@@ -66,13 +67,9 @@ initScene = (loaded_crab) => {
     });
     //---
 
+    //test.addEventListener('collision', collision_handler);
 
-    const test = create_building(0, 9, 0, 1)
-    scene.add(test);
-
-    test.addEventListener('collision', collision_handler);
-
-    const controls = new OrbitControls(camera, renderer.domElement);
+    // const controls = new OrbitControls(camera, renderer.domElement);
     requestAnimationFrame(render);
 };
 
@@ -100,18 +97,20 @@ document.onkeydown = function (key) {
     box.setLinearVelocity(new THREE.Vector3(0, 0, 0));
     box.setAngularVelocity(new THREE.Vector3(0, 0, 0));
 
+    const offset = 0.2
+
     switch (key.code) {
         case "ArrowRight":
-            box.position.x += 1;
+            box.position.x += offset;
             break;
         case "ArrowLeft":
-            box.position.x -= 1;
+            box.position.x -= offset;
             break;
         case "ArrowUp":
-            box.position.z -= 1;
+            box.position.z -= offset;
             break;
         case "ArrowDown":
-            box.position.z += 1;
+            box.position.z += offset;
             break;
     }
     ;
@@ -124,7 +123,7 @@ const randomInt = (min, max) => {
 
 const collision_handler = (other_object, relative_velocity,
                            relative_rotation, contact_normal) => {
-
+    return;
     if (other_object.name === 'player') {
         console.log(other_object);
         console.log(relative_velocity);
@@ -178,35 +177,39 @@ const create_building = (x, y, z, scale) => {
     // -- buildings --
     const build_material = Physijs.createMaterial(
         new THREE.MeshLambertMaterial({
-            color: 0x00ff00, wireframe: true
+            color: 0x00ff00, wireframe: false
         }),
-        9, // tarcie
+        100, // tarcie
         0.1) // bouncines
 
     const build = new Physijs.BoxMesh(
         new THREE.CubeGeometry(5 * scale, 10, 5 * scale),
         build_material,
-        500, 500 // im wieksze tym i guess ciezsze
+        500,
+        250 // im wieksze tym i guess ciezsze
     )
 
-    build.position.y = y;
-    build.position.x = x;
-    build.position.z = z;
+
+    build.position.set(x, y, z)
+    build.castShadow = true;
+    build.reciveShadow = true;
+    console.log(build.position)
     return build;
 }
 
 const create_floor = () => {
     // --- FLOOR ---
     const floor_material = new Physijs.createMaterial(
-        new THREE.MeshLambertMaterial({color: 0x0000ff, wireframe: true}),
-        0.9,
-        0.9
+        new THREE.MeshStandardMaterial({color: 0x0000ff}),
+        1.1,
+        0.1
     )
     const floor = new Physijs.BoxMesh(
-        new THREE.BoxGeometry(50, 1, 50),
+        new THREE.BoxGeometry(100, 1, 100),
         floor_material,
         0, 0
     )
+    floor.receiveShadow = true;
     return floor;
 }
 
@@ -246,6 +249,7 @@ const collapse_building = (angle, building, force) => {
 
 }
 
+
 const create_player = () => {
     // --- BOX ---
     const colider_material = new Physijs.createMaterial(
@@ -258,13 +262,18 @@ const create_player = () => {
         colider_material
     );
     player_colider.name = "player";
-    player_colider.position.set(0,12,0)
-    player_colider.scale.set(5, 5, 5);
+    player_colider.position.set(0, 12, 0)
     return player_colider;
 }
 
 const create_light = () => {
-    const light = new THREE.AmbientLight(0xffffff); // soft white light
+    // const light = new THREE.AmbientLight(0xffffff); // soft white light
+    const light = new THREE.PointLight(0xaaaaaa, 1, 1000);
+    light.position.set(0, 50, 0);
+
+    light.castShadow = true;
+    light.shadowDarkness = 0.5;
+    light.shadowCameraVisible = true;
     return light;
 }
 
@@ -287,7 +296,7 @@ const create_camera = () => {
         1,
         1000
     );
-    camera.position.set(60, 50, 60);
+    camera.position.set(60, 100, 60);
     camera.lookAt(scene.position);
     return camera;
 }
@@ -296,12 +305,15 @@ const create_renderer = () => {
     let renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById('viewport').appendChild(renderer.domElement);
+    renderer.shadowMap.enabled = true;
     return renderer;
 }
 
 const create_scene = () => {
     let scene = new Physijs.Scene({fixedTimeStep: 1 / 60});
+    scene.background = new THREE.Color(0x444444);
     // scene.background = create_sky_box()
+
     return scene;
 }
 
@@ -377,16 +389,23 @@ const add_sepia = () => {
     composer3.addPass(effectColorify2);
 
     renderScene.uniforms["tDiffuse"].value = composerScene.renderTarget2.texture;
-    return {
+    return [
         composer3, composerScene
-    }
+    ]
 }
 
 render = () => {
     sync_player()
 
     let player = scene.getObjectByName('player')
+
+    camera.position.set(
+        player.position.x + 12,
+        player.position.y + 2.5,
+        player.position.z + 12,
+    )
     camera.lookAt(player.position)
+
 
     // --- animacje crab ---
     let delta = clock.getDelta();
@@ -396,11 +415,13 @@ render = () => {
     scene.simulate(); //update physics
     renderer.render(scene, camera); // render the scene
 
-    // --- sepia ---
-    // let {composer3, composerScene} = add_sepia();
-    // composerScene.render(0.01);
-    // composer3.render(0.01);
-    // ---
+    if (composerScene) {
+        // --- sepia ---
+        composerScene.render(0.01);
+        composer.render(0.01);
+        // ---
+    }
+
 
     requestAnimationFrame(render);
 };
