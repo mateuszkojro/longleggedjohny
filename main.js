@@ -4,16 +4,16 @@ import {OrbitControls} from "./js/controls.js";
 import {GLTFLoader} from "./js/loader.js";
 
 // imports for sepia renderer pass
-import { EffectComposer } from './js/jsm/postprocessing/EffectComposer.js';
-import { ShaderPass } from "./js/jsm/postprocessing/ShaderPass.js";
-import { FilmPass } from './js/jsm/postprocessing/FilmPass.js';
-import { SepiaShader } from './js/jsm/shaders/SepiaShader.js';
-import { MaskPass, ClearMaskPass } from './js/jsm/postprocessing/MaskPass.js';
-import { RenderPass } from './js/jsm/postprocessing/RenderPass.js';
-import { TexturePass } from './js/jsm/postprocessing/TexturePass.js';
-import { GammaCorrectionShader } from './js/jsm/shaders/GammaCorrectionShader.js';
-import { VignetteShader } from '/js/jsm/shaders/VignetteShader.js';
-import { ColorifyShader } from './js/jsm/shaders/ColorifyShader.js';
+import {EffectComposer} from './js/jsm/postprocessing/EffectComposer.js';
+import {ShaderPass} from "./js/jsm/postprocessing/ShaderPass.js";
+import {FilmPass} from './js/jsm/postprocessing/FilmPass.js';
+import {SepiaShader} from './js/jsm/shaders/SepiaShader.js';
+import {ClearMaskPass, MaskPass} from './js/jsm/postprocessing/MaskPass.js';
+import {RenderPass} from './js/jsm/postprocessing/RenderPass.js';
+import {TexturePass} from './js/jsm/postprocessing/TexturePass.js';
+import {GammaCorrectionShader} from './js/jsm/shaders/GammaCorrectionShader.js';
+import {VignetteShader} from '/js/jsm/shaders/VignetteShader.js';
+import {ColorifyShader} from './js/jsm/shaders/ColorifyShader.js';
 
 
 // setup physics engine
@@ -30,6 +30,7 @@ initScene = (loaded_crab) => {
 
     crab = loaded_crab.scene.children[2];
     crab.name = "crab"
+    crab.scale.set(5, 5, 5)
 
     renderer = create_renderer()
     scene = create_scene()
@@ -50,13 +51,12 @@ initScene = (loaded_crab) => {
     }
 
 
-
     //--- Animating crab model ---
     mixer = new THREE.AnimationMixer(crab);
 
     loaded_crab.animations.forEach((clip) => {
 
-        if (clip.name == "Walk"){
+        if (clip.name == "Walk") {
             console.log("playing: ", clip)
 
             mixer.clipAction(clip).play();
@@ -248,16 +248,18 @@ const collapse_building = (angle, building, force) => {
 
 const create_player = () => {
     // --- BOX ---
-    const colider_material = new Physijs.createMaterial(new
-    THREE.MeshLambertMaterial({
-        color: "red",
-        wireframe: true
-    }), 9, 0.2)
+    const colider_material = new Physijs.createMaterial(
+        new THREE.MeshLambertMaterial({
+            color: "red",
+            wireframe: true
+        }), 9, 0.2)
     const player_colider = new Physijs.BoxMesh(
         new THREE.CubeGeometry(5, 2, 5),
         colider_material
     );
     player_colider.name = "player";
+    player_colider.position.set(0,12,0)
+    player_colider.scale.set(5, 5, 5);
     return player_colider;
 }
 
@@ -382,6 +384,9 @@ const add_sepia = () => {
 
 render = () => {
     sync_player()
+
+    let player = scene.getObjectByName('player')
+    camera.lookAt(player.position)
 
     // --- animacje crab ---
     let delta = clock.getDelta();
