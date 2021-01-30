@@ -186,13 +186,13 @@ const create_building = (x, y, z, scale) => {
             wireframe: false,
             map: texture
         }),
-        100, // tarcie
+        1, // tarcie
         0.1) // bouncines
 
     const build = new Physijs.BoxMesh(
         new THREE.CubeGeometry(5 * scale, 10, 5 * scale),
         build_material,
-        500,
+        50,
         250 // im wieksze tym i guess ciezsze
     )
 
@@ -218,7 +218,7 @@ const create_floor = () => {
             color: 0x0000ff,
             map:texture
         }),
-        1.1,
+        1,
         0.1
     )
     const floor = new Physijs.BoxMesh(
