@@ -1,23 +1,50 @@
 import {OrbitControls} from "./js/controls.js";
 import {GLTFLoader} from "./js/loader.js";
-//import {Vector3} from "./js/three.module";
 
-
-// class player {
-//     constructor(physi_obj,  model) {
-//         this.position = new Vector3(0,0,0);
-//     }
-// }
-
-
-var loader = new GLTFLoader();
-
+// setup physics engine
 Physijs.scripts.worker = '/js/physijs_worker.js';
 Physijs.scripts.ammo = '/js/ammo.js';
 
+// public names
+var crab, initScene, render, renderer, scene, camera, box;
+var loader = new GLTFLoader();
+
+initScene = (loaded_crab) => {
+
+
+    crab = loaded_crab.scene.children[2];
+    crab.name = "crab"
+
+    renderer = create_renderer()
+    scene = create_scene()
+    scene.add(create_light())
+    camera = create_camera()
+    scene.add(camera);
+    scene.add(create_floor())
+    scene.add(create_building(4, 4, 4, 1))
+    scene.add(create_player())
+    scene.add(crab);
+
+    for (let i = 0; i < 2; i++) {
+        scene.add(
+            create_building(randomInt(-25, 25),
+                5,
+                randomInt(-25, 25))
+        )
+    }
+
+
+    const test = create_building(0, 9, 0, 1)
+    scene.add(test);
+
+    test.addEventListener('collision', collision_handler);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    requestAnimationFrame(render);
+};
+
 // dzieki temu moge znalezc z ktorej strony uderzyla - mega chujowo zrobione
 // ale will do for now
-
 const find_bigest = (vector) => {
     const max = max([vector.x, vector.y, vector.z]);
     switch (max) {
@@ -60,6 +87,58 @@ document.onkeydown = function (key) {
 
 const randomInt = (min, max) => {
     return min + Math.floor((max - min) * Math.random());
+}
+
+const collision_handler = (other_object, relative_velocity,
+                      relative_rotation, contact_normal) => {
+
+    if (other_object.name === 'player') {
+        console.log(other_object);
+        console.log(relative_velocity);
+        console.log(relative_rotation);
+        console.log(contact_normal);
+        //other_object.world.remove(other_object);
+        //other_object.material.color.setHex(0x0000ff);
+
+        // TODO: give him some new material
+        const point = new Physijs.ConvexMesh(
+            new THREE.SphereGeometry(.5),
+            box_material,
+            0
+        )
+        //point.position.x = other_object.position.x + (-2.5 * contact_normal.x);
+        //point.position.y = other_object.position.y + (-2.5 * contact_normal.y);
+        //point.position.z = other_object.position.z + (-2.5 * contact_normal.z);
+
+        point.position.x = this.position.x + (2.5 * contact_normal.x);
+        point.position.y = this.position.y + (2.5 * contact_normal.y);
+        point.position.z = this.position.z + (2.5 * contact_normal.z);
+
+        //scene.add(point);
+
+        //const x = this.position.x;
+        //const y = this.position.y;
+        //const z = this.position.z;
+
+        const {base, gravel} = collapse_building(contact_normal, this, relative_velocity);
+
+        const world = this.world;
+
+        this.world.remove(this);
+
+        scene.add(base)
+        scene.add(gravel)
+
+        const geo = new THREE.BufferGeometry().setFromPoints(
+            [
+                point.position.x,
+                point.position.y,
+                point.position.z
+            ])
+
+    }
+
+
 }
 
 const create_building = (x, y, z, scale) => {
@@ -134,20 +213,28 @@ const collapse_building = (angle, building, force) => {
 
 }
 
-var crab, initScene, render, renderer, scene, camera, box;
+const create_player = () => {
+    // --- BOX ---
+    const colider_material = new Physijs.createMaterial(new
+    THREE.MeshLambertMaterial({
+        color: "red",
+        wireframe: true
+    }), 9, 0.2)
+    const player_colider = new Physijs.BoxMesh(
+        new THREE.CubeGeometry(5, 2, 5),
+        colider_material
+    );
+    player_colider.name = "player";
+    return player_colider;
+}
 
-initScene = (loaded_crab) => {
-    renderer = new THREE.WebGLRenderer({antialias: true});
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById('viewport').appendChild(renderer.domElement);
+const create_light = () => {
+    const light = new THREE.AmbientLight(0xffffff); // soft white light
+    return light;
+}
 
-
-    crab = loaded_crab.scene.children[2];
-
-    scene = new Physijs.Scene({fixedTimeStep: 1 / 60});
-
-
-    scene.background = new THREE.CubeTextureLoader().setPath('./files/skybox/').load([
+const create_sky_box = () => {
+    let skybox = new THREE.CubeTextureLoader().setPath('./files/skybox/').load([
         'px.png',
         'nx.png',
         'py.png',
@@ -155,15 +242,11 @@ initScene = (loaded_crab) => {
         'pz.png',
         'nz.png'
     ]);
+    return skybox;
+}
 
-    const light = new THREE.AmbientLight(0xffffff); // soft white light
-    scene.add(light);
-
-    scene.add(crab);
-    crab.position.y = 10;
-
-
-    camera = new THREE.PerspectiveCamera(
+const create_camera = () => {
+    let camera = new THREE.PerspectiveCamera(
         35,
         window.innerWidth / window.innerHeight,
         1,
@@ -171,126 +254,26 @@ initScene = (loaded_crab) => {
     );
     camera.position.set(60, 50, 60);
     camera.lookAt(scene.position);
-    scene.add(camera);
+    return camera;
+}
 
-    //
-    scene.add(create_floor())
-    //  for (let i = 0; i < 2; i++) {
-    // scene.add(
-    // create_building(randomInt(-25, 25),
-    // 5,
-    // randomInt(-25, 25)))
-    // }
+const create_renderer = () => {
+    let renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('viewport').appendChild(renderer.domElement);
+    return renderer;
+}
 
-    scene.add(
-        create_building(4, 4, 4, 1)
-    )
+const create_scene = () => {
+    let scene =  new Physijs.Scene({fixedTimeStep: 1 / 60});
+    scene.background = create_sky_box()
+    return scene;
+}
 
-
-    console.log("loaded crab: ", crab)
-
-
-    // --- BOX ---
-    const box_material = new Physijs.createMaterial(new
-    THREE.MeshLambertMaterial({
-        color: "red",
-        wireframe: true
-    }), 9, 0.2)
-
-
-    const box = new Physijs.BoxMesh(
-        new THREE.CubeGeometry(5, 2, 5),
-        box_material
-    );
-
-    box.rotateX(0.39)
-    const player = new THREE.Group()
-    player.add(box)
-    player.add(crab)
-    //player.name = "player"
-    console.log("ready crab: ", crab)
-    box.name = "player";
-    scene.add(box);
-    scene.add(player);
-
-    const test = create_building(0, 9, 0, 1)
-    test.name = "sp";
-    scene.add(test);
-
-    test.addEventListener('collision', function (other_object, relative_velocity,
-                                                 relative_rotation, contact_normal) {
-
-        if (other_object.name === 'player') {
-            console.log(other_object);
-            console.log(relative_velocity);
-            console.log(relative_rotation);
-            console.log(contact_normal);
-            //other_object.world.remove(other_object);
-            //other_object.material.color.setHex(0x0000ff);
-            const point = new Physijs.ConvexMesh(
-                new THREE.SphereGeometry(.5),
-                box_material,
-                0
-            )
-            //point.position.x = other_object.position.x + (-2.5 * contact_normal.x);
-            //point.position.y = other_object.position.y + (-2.5 * contact_normal.y);
-            //point.position.z = other_object.position.z + (-2.5 * contact_normal.z);
-
-            point.position.x = this.position.x + (2.5 * contact_normal.x);
-            point.position.y = this.position.y + (2.5 * contact_normal.y);
-            point.position.z = this.position.z + (2.5 * contact_normal.z);
-
-            //scene.add(point);
-
-            //const x = this.position.x;
-            //const y = this.position.y;
-            //const z = this.position.z;
-
-            const {base, gravel} = collapse_building(contact_normal, this, relative_velocity);
-
-            const world = this.world;
-
-            this.world.remove(this);
-
-            console.log(base)
-
-            scene.add(base)
-            scene.add(gravel)
-
-            console.log(base)
-
-            const geo = new THREE.BufferGeometry().setFromPoints(
-                [point.position.x,
-                    point.position.y,
-                    point.position.z])
-            //const new_one = create_building(x, y, z, 1 / 2);
-            //scene.add(new_one);
-
-        }
-
-
-    });
-
-
-    //crab.scene.children[0].boundingBox = new THREE.Box3(new THREE.Vector3(1,1,1), new THREE.Vector3(3,3,3));
-
-
-    // const sphere = new Physijs.ConvexMesh(
-    //       crab.scene.children[1], //new THREE.SphereGeometry(2.5),
-    //       box_material
-    //   )
-    //sphere.position.y = 3;
-    // sphere.name = "sp";
-    //scene.add(sphere)
-
-
-    const controls = new OrbitControls(camera, renderer.domElement);
-    requestAnimationFrame(render);
-};
-
-render = function () {
+const sync_player = () => {
+    let crab = scene.getObjectByName('crab')
     if (crab != undefined) {
-        var box = scene.getObjectByName('player');
+        let box = scene.getObjectByName('player');
         crab.position.x = box.position.x;
         crab.position.y = box.position.y;
         crab.position.z = box.position.z;
@@ -298,14 +281,17 @@ render = function () {
         crab.rotation.y = box.rotation.y;
         crab.rotation.z = box.rotation.z;
     }
-    scene.simulate();
-    // run physics
+}
+
+
+render = () => {
+    sync_player()
+    scene.simulate(); //update physics
     renderer.render(scene, camera); // render the scene
     requestAnimationFrame(render);
 };
 
-
-
+// that is the place where everything begins
 loader.load(
     "./files/crab.glb",
     initScene,
@@ -316,6 +302,3 @@ loader.load(
         console.log("An error happened", err);
     }
 );
-
-//@TODO jak dodamy sepie to bedzie wygladalo cool a bedzie o wiele mniej
-//problemow z kolorami
