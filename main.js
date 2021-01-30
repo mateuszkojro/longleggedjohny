@@ -1,13 +1,29 @@
+// controls
 import {OrbitControls} from "./js/controls.js";
+// ladowanie modelu craba
 import {GLTFLoader} from "./js/loader.js";
+
+// imports for sepia renderer pass
+import { EffectComposer } from './js/jsm/postprocessing/EffectComposer.js';
+import { ShaderPass } from "./js/jsm/postprocessing/ShaderPass.js";
+import { FilmPass } from './js/jsm/postprocessing/FilmPass.js';
+import { SepiaShader } from './js/jsm/shaders/SepiaShader.js';
+import { MaskPass, ClearMaskPass } from './js/jsm/postprocessing/MaskPass.js';
+import { RenderPass } from './js/jsm/postprocessing/RenderPass.js';
+import { TexturePass } from './js/jsm/postprocessing/TexturePass.js';
+import { GammaCorrectionShader } from './js/jsm/shaders/GammaCorrectionShader.js';
+import { VignetteShader } from '/js/jsm/shaders/VignetteShader.js';
+import { ColorifyShader } from './js/jsm/shaders/ColorifyShader.js';
+
 
 // setup physics engine
 Physijs.scripts.worker = '/js/physijs_worker.js';
 Physijs.scripts.ammo = '/js/ammo.js';
 
 // public names
-var crab, initScene, render, renderer, scene, camera, box;
+var crab, initScene, render, renderer, scene, camera, box, mixer;
 var loader = new GLTFLoader();
+var clock = new THREE.Clock();
 
 initScene = (loaded_crab) => {
 
@@ -32,6 +48,23 @@ initScene = (loaded_crab) => {
                 randomInt(-25, 25))
         )
     }
+
+
+
+    //--- Animating crab model ---
+    mixer = new THREE.AnimationMixer(crab);
+
+    loaded_crab.animations.forEach((clip) => {
+
+        if (clip.name == "Walk"){
+            console.log("playing: ", clip)
+
+            mixer.clipAction(clip).play();
+
+        }
+
+    });
+    //---
 
 
     const test = create_building(0, 9, 0, 1)
@@ -90,7 +123,7 @@ const randomInt = (min, max) => {
 }
 
 const collision_handler = (other_object, relative_velocity,
-                      relative_rotation, contact_normal) => {
+                           relative_rotation, contact_normal) => {
 
     if (other_object.name === 'player') {
         console.log(other_object);
@@ -265,8 +298,8 @@ const create_renderer = () => {
 }
 
 const create_scene = () => {
-    let scene =  new Physijs.Scene({fixedTimeStep: 1 / 60});
-    scene.background = create_sky_box()
+    let scene = new Physijs.Scene({fixedTimeStep: 1 / 60});
+    // scene.background = create_sky_box()
     return scene;
 }
 
@@ -283,11 +316,87 @@ const sync_player = () => {
     }
 }
 
+const add_sepia = () => {
+    let renderScene, composerScene, composer3;
+
+    const shaderSepia = SepiaShader;
+    const shaderVignette = VignetteShader;
+    const effectSepia = new ShaderPass(shaderSepia);
+    effectSepia.uniforms["amount"].value = 0.9;
+
+    const effectFilm = new FilmPass(0.35, 0.025, 648, false);
+    const gammaCorrection = new ShaderPass(GammaCorrectionShader);
+    const clearMask = new ClearMaskPass();
+    const renderMask = new MaskPass(scene, camera);
+    const renderMaskInverse = new MaskPass(scene, camera);
+    const effectVignette = new ShaderPass(shaderVignette);
+    renderMaskInverse.inverse = true;
+
+
+    effectVignette.uniforms["offset"].value = 0.95;
+    effectVignette.uniforms["darkness"].value = 1.6;
+
+    const effectColorify1 = new ShaderPass(ColorifyShader);
+    const effectColorify2 = new ShaderPass(ColorifyShader);
+    effectColorify1.uniforms['color'] = new THREE.Uniform(new THREE.Color(1, 0.8, 0.8));
+    effectColorify2.uniforms['color'] = new THREE.Uniform(new THREE.Color(1, 0.75, 0.5));
+
+    const rtParameters = {
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        format: THREE.RGBFormat,
+        stencilBuffer: true
+    };
+
+    const renderModel = new RenderPass(scene, camera);
+
+    const rtWidth = window.innerWidth / 2;
+    const rtHeight = window.innerHeight / 2;
+
+    renderModel.clear = false;
+
+    composerScene = new EffectComposer(renderer, new THREE.WebGLRenderTarget(rtWidth * 2, rtHeight * 2, rtParameters));
+
+    composerScene.addPass(renderModel);
+    composerScene.addPass(renderMaskInverse);
+    composerScene.addPass(clearMask);
+
+    renderScene = new TexturePass(composerScene.renderTarget2.texture);
+
+
+    composer3 = new EffectComposer(renderer, new THREE.WebGLRenderTarget(rtWidth, rtHeight, rtParameters));
+
+    composer3.addPass(renderScene);
+    composer3.addPass(gammaCorrection);
+    composer3.addPass(effectSepia);
+    composer3.addPass(effectFilm);
+    composer3.addPass(effectVignette);
+    composer3.addPass(effectColorify1);
+    composer3.addPass(effectColorify2);
+
+    renderScene.uniforms["tDiffuse"].value = composerScene.renderTarget2.texture;
+    return {
+        composer3, composerScene
+    }
+}
 
 render = () => {
     sync_player()
+
+    // --- animacje crab ---
+    let delta = clock.getDelta();
+    if (mixer) mixer.update(delta);
+    // ---
+
     scene.simulate(); //update physics
     renderer.render(scene, camera); // render the scene
+
+    // --- sepia ---
+    // let {composer3, composerScene} = add_sepia();
+    // composerScene.render(0.01);
+    // composer3.render(0.01);
+    // ---
+
     requestAnimationFrame(render);
 };
 
