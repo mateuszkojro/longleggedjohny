@@ -1,10 +1,9 @@
 // controls
 // ladowanie modelu craba
 import {GLTFLoader} from "./js/loader.js";
-// import {OrbitControls} from "./js/controls";
+import {OrbitControls} from "./js/controls.js";
 
 //hello
-
 // imports for sepia renderer pass
 import {EffectComposer} from './js/jsm/postprocessing/EffectComposer.js';
 import {ShaderPass} from "./js/jsm/postprocessing/ShaderPass.js";
@@ -18,64 +17,64 @@ import {VignetteShader} from '/js/jsm/shaders/VignetteShader.js';
 import {ColorifyShader} from './js/jsm/shaders/ColorifyShader.js';
 
 
-
 // setup physics engine
 Physijs.scripts.worker = '/js/physijs_worker.js';
 Physijs.scripts.ammo = '/js/ammo.js';
 
 // public names - everything with global scopes goes here defined with var
-var crab, initScene, render, renderer, scene, camera, box, mixer, composerScene, composer;
-var loader = new GLTFLoader();
-var clock = new THREE.Clock();
+var g_crab, g_initScene, g_render, g_renderer, g_scene, g_camera, g_mixer, g_composerScene, g_composer;
+var g_loader = new GLTFLoader();
+var g_clock = new THREE.Clock();
 
 // our setup
-initScene = (loaded_crab) => {
+g_initScene = (loaded_crab) => {
 
-    renderer = create_renderer()
-    scene = create_scene()
-    scene.add(create_light())
-    camera = create_camera()
-    scene.add(camera);
-    scene.add(create_floor())
-    scene.add(create_player())
+    g_renderer = create_renderer()
+    g_scene = create_scene()
+    g_scene.add(create_light())
+    g_camera = create_camera()
+    g_scene.add(g_camera);
+    g_scene.add(create_floor())
+    g_scene.add(create_player())
 
     // --- config loaded model
-    crab = loaded_crab.scene.children[2];
-    crab.name = "crab"
-    crab.castShadow = true;
-    crab.reciveShadow = true;
-    scene.add(crab);
+    g_crab = loaded_crab.scene.children[2];
+    g_crab.name = "crab"
+    g_crab.castShadow = true;
+    g_crab.reciveShadow = true;
+    g_scene.add(g_crab);
     // ---
 
-    scene.add(create_building(10, 10, 10, 1))
-    scene.add(create_building(10, 10, -10, 1))
-    scene.add(create_building(-10, 10, 10, 1))
-    scene.add(create_building(-10, 10, -10, 1))
+    g_scene.add(create_building(10, 10, 10, 1))
+    g_scene.add(create_building(10, 10, -10, 1))
+    g_scene.add(create_building(-10, 10, 10, 1))
+    g_scene.add(create_building(-10, 10, -10, 1))
 
 
     // FIXME: that could be done much better but i cannot
     // think of the way rn
     let [comp, compScene] = add_sepia();
-    composer = comp;
-    composerScene = compScene;
+    g_composer = comp;
+    g_composerScene = compScene;
 
     //--- Run all animations in model for now ---
     // FIXME: get it to another func
-    mixer = new THREE.AnimationMixer(crab);
+    g_mixer = new THREE.AnimationMixer(g_crab);
     loaded_crab.animations.forEach((clip) => {
         // we could check for animation name here
-        if (true) {
+        if (clip.name == "Attack") {
             console.log("playing: ", clip)
-            mixer.clipAction(clip).play();
+            g_mixer.clipAction(clip).play();
         }
     });
     //---
 
     // FIXME: for now nothing bcs collison_handler does not work
-    scene.getObjectByName('player').addEventListener('collision', ()=>{});
+    g_scene.getObjectByName('player').addEventListener('collision', () => {
+    });
 
-    // const controls = new OrbitControls(camera, renderer.domElement);
-    requestAnimationFrame(render);
+    // const controls = new OrbitControls(g_camera, g_renderer.domElement);
+    requestAnimationFrame(g_render);
 };
 
 // dzieki temu moge znalezc z ktorej strony uderzyla - mega chujowo zrobione
@@ -94,7 +93,7 @@ const find_bigest = (vector) => {
 
 // controlsy dla obkeitu oznaczonego nazwa player - poki co tylko rudamentary
 document.onkeydown = function (key) {
-    var box = scene.getObjectByName('player');
+    var box = g_scene.getObjectByName('player');
     // jezeli zmieniamy pozycje muismy uzyc tkiego hacka
     box.__dirtyRotation = true;
     box.__dirtyPosition = true;
@@ -119,7 +118,7 @@ document.onkeydown = function (key) {
             break;
     }
     ;
-    scene.simulate();
+    g_scene.simulate();
 }
 
 const randomInt = (min, max) => {
@@ -164,8 +163,8 @@ const collision_handler = (other_object, relative_velocity,
 
         this.world.remove(this);
 
-        scene.add(base)
-        scene.add(gravel)
+        g_scene.add(base)
+        g_scene.add(gravel)
 
         const geo = new THREE.BufferGeometry().setFromPoints(
             [
@@ -182,10 +181,10 @@ const collision_handler = (other_object, relative_velocity,
 // returns a box with configured textures
 const create_building = (x, y, z, scale) => {
     // -- buildings --
-    const texture = new THREE.TextureLoader().load( "./files/building.jpg" );
+    const texture = new THREE.TextureLoader().load("./files/building.jpg");
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set( 4, 4 );
+    texture.repeat.set(4, 4);
 
     const build_material = Physijs.createMaterial(
         new THREE.MeshLambertMaterial({
@@ -216,16 +215,16 @@ const create_building = (x, y, z, scale) => {
 const create_floor = () => {
     // --- FLOOR ---
 
-    const texture = new THREE.TextureLoader().load( "./files/ground.jpg" );
+    const texture = new THREE.TextureLoader().load("./files/ground.jpg");
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set( 4, 4 );
+    texture.repeat.set(4, 4);
 
 
     const floor_material = new Physijs.createMaterial(
         new THREE.MeshStandardMaterial({
             color: 0x0000ff,
-            map:texture
+            map: texture
         }),
         1,
         0.1
@@ -323,7 +322,7 @@ const create_camera = () => {
         1000
     );
     camera.position.set(60, 100, 60);
-    camera.lookAt(scene.position);
+    camera.lookAt(g_scene.position);
     return camera;
 }
 
@@ -344,9 +343,9 @@ const create_scene = () => {
 }
 
 const sync_player = () => {
-    let crab = scene.getObjectByName('crab')
+    let crab = g_scene.getObjectByName('crab')
     if (crab != undefined) {
-        let box = scene.getObjectByName('player');
+        let box = g_scene.getObjectByName('player');
         crab.position.x = box.position.x;
         crab.position.y = box.position.y;
         crab.position.z = box.position.z;
@@ -367,8 +366,8 @@ const add_sepia = () => {
     const effectFilm = new FilmPass(0.35, 0.025, 648, false);
     const gammaCorrection = new ShaderPass(GammaCorrectionShader);
     const clearMask = new ClearMaskPass();
-    const renderMask = new MaskPass(scene, camera);
-    const renderMaskInverse = new MaskPass(scene, camera);
+    const renderMask = new MaskPass(g_scene, g_camera);
+    const renderMaskInverse = new MaskPass(g_scene, g_camera);
     const effectVignette = new ShaderPass(shaderVignette);
     renderMaskInverse.inverse = true;
 
@@ -388,14 +387,14 @@ const add_sepia = () => {
         stencilBuffer: true
     };
 
-    const renderModel = new RenderPass(scene, camera);
+    const renderModel = new RenderPass(g_scene, g_camera);
 
     const rtWidth = window.innerWidth / 2;
     const rtHeight = window.innerHeight / 2;
 
     renderModel.clear = false;
 
-    composerScene = new EffectComposer(renderer, new THREE.WebGLRenderTarget(rtWidth * 2, rtHeight * 2, rtParameters));
+    composerScene = new EffectComposer(g_renderer, new THREE.WebGLRenderTarget(rtWidth * 2, rtHeight * 2, rtParameters));
 
     composerScene.addPass(renderModel);
     composerScene.addPass(renderMaskInverse);
@@ -404,7 +403,7 @@ const add_sepia = () => {
     renderScene = new TexturePass(composerScene.renderTarget2.texture);
 
 
-    composer3 = new EffectComposer(renderer, new THREE.WebGLRenderTarget(rtWidth, rtHeight, rtParameters));
+    composer3 = new EffectComposer(g_renderer, new THREE.WebGLRenderTarget(rtWidth, rtHeight, rtParameters));
 
     composer3.addPass(renderScene);
     composer3.addPass(gammaCorrection);
@@ -421,53 +420,53 @@ const add_sepia = () => {
 }
 
 const sync_camera = () => {
-    let player = scene.getObjectByName('player')
+    let player = g_scene.getObjectByName('player')
 
-    camera.position.set(
+    g_camera.position.set(
         player.position.x + 12,
         player.position.y + 2.5,
         player.position.z + 12,
     )
-    camera.lookAt(player.position)
+    g_camera.lookAt(player.position)
 }
 
 const update_animation = () => {
     // --- animacje crab ---
-    let delta = clock.getDelta();
-    if (mixer) mixer.update(delta);
+    let delta = g_clock.getDelta();
+    if (g_mixer) g_mixer.update(delta);
     // ---
 }
 
 const apply_sepia = () => {
-    if (composerScene) {
+    if (g_composerScene) {
         // --- sepia ---
-        composerScene.render(0.01);
-        composer.render(0.01);
+        g_composerScene.render(0.01);
+        g_composer.render(0.01);
         // ---
     }
 }
 
 // our game loop
-render = () => {
+g_render = () => {
     sync_player()
     sync_camera() // neds to be below sync_player()
 
     update_animation()
 
-    scene.simulate(); //update physics
+    g_scene.simulate(); //update physics
 
-    renderer.render(scene, camera); // render the scene
+    g_renderer.render(g_scene, g_camera); // render the scene
 
 
     apply_sepia() // neds to be below renderer
 
-    requestAnimationFrame(render);
+    requestAnimationFrame(g_render);
 };
 
 // that is the place where everything begins
-loader.load(
+g_loader.load(
     "./files/crab.glb",
-    initScene,
+    g_initScene,
     (xhr) => {
         console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
     },
