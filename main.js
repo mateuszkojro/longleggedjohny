@@ -22,7 +22,7 @@ Physijs.scripts.worker = '/js/physijs_worker.js';
 Physijs.scripts.ammo = '/js/ammo.js';
 
 // public names - everything with global scopes goes here defined with var
-var g_crab, g_initScene, g_render, g_renderer, g_scene, g_camera, g_mixer, g_composerScene, g_composer;
+var g_crab,g_player ,g_initScene, g_render, g_renderer, g_scene, g_camera, g_mixer, g_composerScene, g_composer;
 var g_loader = new GLTFLoader();
 var g_clock = new THREE.Clock();
 
@@ -35,7 +35,8 @@ g_initScene = (loaded_crab) => {
     g_camera = create_camera()
     g_scene.add(g_camera);
     g_scene.add(create_floor())
-    g_scene.add(create_player())
+    g_player = create_player();
+    g_scene.add(g_player)
 
     // --- config loaded model
     g_crab = loaded_crab.scene.children[2];
@@ -94,31 +95,35 @@ const find_bigest = (vector) => {
 
 // controlsy dla obkeitu oznaczonego nazwa player - poki co tylko rudamentary
 document.onkeydown = function (key) {
-    var box = g_scene.getObjectByName('player');
+    //var g_player = g_scene.getObjectByName('player');
+
+    // null check
+    if(!g_player) return
+
     // jezeli zmieniamy pozycje muismy uzyc tkiego hacka
-    box.__dirtyRotation = true;
-    box.__dirtyPosition = true;
+    g_player.__dirtyRotation = true;
+    g_player.__dirtyPosition = true;
     // You may also want to cancel the object's velocity
-    box.setLinearVelocity(new THREE.Vector3(0, 0, 0));
-    box.setAngularVelocity(new THREE.Vector3(0, 0, 0));
+    g_player.setLinearVelocity(new THREE.Vector3(0, 0, 0));
+    g_player.setAngularVelocity(new THREE.Vector3(0, 0, 0));
 
     const offset = 0.2
 
     switch (key.code) {
         case "ArrowRight":
-            box.position.x += offset;
+            g_player.position.x += offset;
             break;
         case "ArrowLeft":
-            box.position.x -= offset;
+            g_player.position.x -= offset;
             break;
         case "ArrowUp":
-            box.position.z -= offset;
+            g_player.position.z -= offset;
             break;
         case "ArrowDown":
-            box.position.z += offset;
+            g_player.position.z += offset;
             break;
         case "KeyA":
-            box.setLinearFactor(2, 2.2, 2);
+            g_player.setLinearFactor(2, 2.2, 2);
             break;
     }
     ;
@@ -346,22 +351,21 @@ const create_scene = () => {
 }
 
 const sync_player = () => {
-    let crab = g_scene.getObjectByName('crab')
-    if (crab != undefined) {
-        let box = g_scene.getObjectByName('player');
+    //let crab = g_scene.getObjectByName('crab')
+    if (!g_crab) return
+        //let box = g_scene.getObjectByName('player');
 
-        crab.position.set(
-            box.position.x,
-            box.position.y,
-            box.position.z
+        g_crab.position.set(
+            g_player.position.x,
+            g_player.position.y,
+            g_player.position.z
         )
 
-        crab.rotation.set(
-            box.rotation.x,
-            box.rotation.y - 0.8,
-            box.rotation.z
+        g_crab.rotation.set(
+            g_player.rotation.x,
+            g_player.rotation.y - 0.8,
+            g_player.rotation.z
         )
-    }
 }
 
 const add_sepia = () => {
@@ -429,14 +433,16 @@ const add_sepia = () => {
 }
 
 const sync_camera = () => {
-    const player = g_scene.getObjectByName('player')
+    //const player = g_scene.getObjectByName('player')
+
+    if(!g_player) return;
 
     g_camera.position.set(
-        player.position.x,
-        player.position.y + 2.5,
-        player.position.z + 12,
+        g_player.position.x,
+        g_player.position.y + 2.5,
+        g_player.position.z + 12,
     )
-    g_camera.lookAt(player.position)
+    g_camera.lookAt(g_player.position)
 }
 
 const update_animation = () => {
@@ -447,12 +453,14 @@ const update_animation = () => {
 }
 
 const apply_sepia = () => {
-    if (g_composerScene) {
+    if (!g_composerScene) return
         // --- sepia ---
-        g_composerScene.render(0.01);
-        g_composer.render(0.01);
+        let delta = g_clock.getDelta();
+        // g_composerScene.render(0.01);
+        // g_composer.render(0.01);
+        g_composerScene.render(delta);
+        g_composer.render(delta);
         // ---
-    }
 }
 
 // our game loop
