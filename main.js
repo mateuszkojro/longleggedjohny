@@ -1,7 +1,7 @@
 // controls
 // ladowanie modelu craba
 import {GLTFLoader} from "./js/loader.js";
-import {OrbitControls} from "./js/controls.js";
+import  {OrbitControls} from "./js/controls.js";
 
 //hello
 // imports for sepia renderer pass
@@ -57,7 +57,7 @@ g_initScene = (loaded_crab) => {
     g_composer = comp;
     g_composerScene = compScene;
 
-    
+
     //--- Run all animations in model for now ---
     // FIXME: get it to another func
     g_mixer = new THREE.AnimationMixer(g_crab);
@@ -74,7 +74,7 @@ g_initScene = (loaded_crab) => {
     g_scene.getObjectByName('player').addEventListener('collision', () => {
     });
 
-    // const controls = new OrbitControls(g_camera, g_renderer.domElement);
+    const controls = new OrbitControls(g_camera, g_renderer.domElement);
     requestAnimationFrame(g_render);
 };
 
@@ -107,7 +107,6 @@ document.onkeydown = function (key) {
     switch (key.code) {
         case "ArrowRight":
             box.position.x += offset;
-            
             break;
         case "ArrowLeft":
             box.position.x -= offset;
@@ -117,6 +116,9 @@ document.onkeydown = function (key) {
             break;
         case "ArrowDown":
             box.position.z += offset;
+            break;
+        case "KeyA":
+            box.setLinearFactor(2, 2.2, 2);
             break;
     }
     ;
@@ -280,12 +282,11 @@ const collapse_building = (angle, building, force) => {
 const create_player = () => {
     // --- BOX ---
     const colider_material = new Physijs.createMaterial(
-        new THREE.MeshLambertMaterial({
-            color: "red",
-            wireframe: true
-        }), 9, 0.2)
+        new THREE.MeshBasicMaterial({
+           wireframe: true
+        }), 2, 0.2)
     const player_colider = new Physijs.BoxMesh(
-        new THREE.CubeGeometry(5, 2, 5),
+        new THREE.CubeGeometry(5, 2, 2.5),
         colider_material
     );
     player_colider.name = "player";
@@ -337,7 +338,7 @@ const create_renderer = () => {
 }
 
 const create_scene = () => {
-    let scene = new Physijs.Scene({fixedTimeStep: 1 / 60});
+    const scene = new Physijs.Scene({fixedTimeStep: 1 / 30});
     scene.background = new THREE.Color(0x444444);
     // scene.background = create_sky_box()
 
@@ -348,12 +349,18 @@ const sync_player = () => {
     let crab = g_scene.getObjectByName('crab')
     if (crab != undefined) {
         let box = g_scene.getObjectByName('player');
-        crab.position.x = box.position.x;
-        crab.position.y = box.position.y;
-        crab.position.z = box.position.z;
-        crab.rotation.x = box.rotation.x;
-        crab.rotation.y = box.rotation.y;
-        crab.rotation.z = box.rotation.z;
+
+        crab.position.set(
+            box.position.x,
+            box.position.y,
+            box.position.z
+        )
+
+        crab.rotation.set(
+            box.rotation.x,
+            box.rotation.y - 0.8,
+            box.rotation.z
+        )
     }
 }
 
@@ -422,10 +429,10 @@ const add_sepia = () => {
 }
 
 const sync_camera = () => {
-    let player = g_scene.getObjectByName('player')
+    const player = g_scene.getObjectByName('player')
 
     g_camera.position.set(
-        player.position.x + 12,
+        player.position.x,
         player.position.y + 2.5,
         player.position.z + 12,
     )
