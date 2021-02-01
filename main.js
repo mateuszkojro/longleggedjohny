@@ -1,7 +1,7 @@
 // controls
 // ladowanie modelu craba
 import {GLTFLoader} from "./js/loader.js";
-import  {OrbitControls} from "./js/controls.js";
+import {OrbitControls} from "./js/controls.js";
 
 //hello
 // imports for sepia renderer pass
@@ -21,9 +21,27 @@ import {ColorifyShader} from './js/jsm/shaders/ColorifyShader.js';
 Physijs.scripts.worker = '/js/physijs_worker.js';
 Physijs.scripts.ammo = '/js/ammo.js';
 
+
+const loadingManager = new THREE.LoadingManager( () => {
+
+    const loadingScreen = document.getElementById( 'loading-screen' );
+    loadingScreen.classList.add( 'fade-out' );
+
+    // optional: remove loader from DOM via event listener
+    loadingScreen.addEventListener( 'transitionend', onTransitionEnd );
+
+} );
+
+
+function onTransitionEnd( event ) {
+
+    event.target.remove();
+
+}
+
 // public names - everything with global scopes goes here defined with var
-var g_crab,g_player ,g_initScene, g_render, g_renderer, g_scene, g_camera, g_mixer, g_composerScene, g_composer;
-var g_loader = new GLTFLoader();
+var g_crab, g_player, g_initScene, g_render, g_renderer, g_scene, g_camera, g_mixer, g_composerScene, g_composer;
+var g_loader = new GLTFLoader(loadingManager);
 var g_clock = new THREE.Clock();
 
 // our setup
@@ -76,8 +94,14 @@ g_initScene = (loaded_crab) => {
     });
 
     const controls = new OrbitControls(g_camera, g_renderer.domElement);
+
+
+
     requestAnimationFrame(g_render);
 };
+
+
+
 
 // dzieki temu moge znalezc z ktorej strony uderzyla - mega chujowo zrobione
 // ale will do for now
@@ -98,7 +122,7 @@ document.onkeydown = function (key) {
     //var g_player = g_scene.getObjectByName('player');
 
     // null check
-    if(!g_player) return
+    if (!g_player) return
 
     // jezeli zmieniamy pozycje muismy uzyc tkiego hacka
     g_player.__dirtyRotation = true;
@@ -123,7 +147,7 @@ document.onkeydown = function (key) {
             g_player.position.z += offset;
             break;
         case "KeyA":
-            g_player.setLinearFactor(2, 2.2, 2);
+            g_player.setLinearVelocity(1, 1, 1);
             break;
     }
     ;
@@ -288,7 +312,7 @@ const create_player = () => {
     // --- BOX ---
     const colider_material = new Physijs.createMaterial(
         new THREE.MeshBasicMaterial({
-           wireframe: true
+            wireframe: true,
         }), 2, 0.2)
     const player_colider = new Physijs.BoxMesh(
         new THREE.CubeGeometry(5, 2, 2.5),
@@ -351,21 +375,19 @@ const create_scene = () => {
 }
 
 const sync_player = () => {
-    //let crab = g_scene.getObjectByName('crab')
-    if (!g_crab) return
-        //let box = g_scene.getObjectByName('player');
+   if (!g_crab) return
 
-        g_crab.position.set(
-            g_player.position.x,
-            g_player.position.y,
-            g_player.position.z
-        )
+    g_crab.position.set(
+        g_player.position.x,
+        g_player.position.y,
+        g_player.position.z
+    )
 
-        g_crab.rotation.set(
-            g_player.rotation.x,
-            g_player.rotation.y - 0.8,
-            g_player.rotation.z
-        )
+    g_crab.rotation.set(
+        g_player.rotation.x,
+        g_player.rotation.y - 0.8,
+        g_player.rotation.z
+    )
 }
 
 const add_sepia = () => {
@@ -435,7 +457,7 @@ const add_sepia = () => {
 const sync_camera = () => {
     //const player = g_scene.getObjectByName('player')
 
-    if(!g_player) return;
+    if (!g_player) return;
 
     g_camera.position.set(
         g_player.position.x,
@@ -446,25 +468,21 @@ const sync_camera = () => {
 }
 
 const update_animation = () => {
-    // --- animacje crab ---
-    let delta = g_clock.getDelta();
+    const delta = g_clock.getDelta();
     if (g_mixer) g_mixer.update(delta);
-    // ---
 }
 
 const apply_sepia = () => {
     if (!g_composerScene) return
-        // --- sepia ---
-        let delta = g_clock.getDelta();
-        // g_composerScene.render(0.01);
-        // g_composer.render(0.01);
-        g_composerScene.render(delta);
-        g_composer.render(delta);
-        // ---
+    //let delta = g_clock.getDelta();
+    g_composerScene.render(0.01);
+    g_composer.render(0.01);
+
 }
 
 // our game loop
 g_render = () => {
+
     sync_player()
     sync_camera() // neds to be below sync_player()
 
@@ -473,7 +491,6 @@ g_render = () => {
     g_scene.simulate(); //update physics
 
     g_renderer.render(g_scene, g_camera); // render the scene
-
 
     apply_sepia() // neds to be below renderer
 
@@ -491,3 +508,4 @@ g_loader.load(
         console.log("An error happened", err);
     }
 );
+
